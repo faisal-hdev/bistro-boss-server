@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+var jwt = require("jsonwebtoken");
+// var token = jwt.sign({ foo: "bar" }, "shhhhh");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -32,8 +34,30 @@ async function run() {
     const reviewCollection = client.db("bistroDB").collection("reviews");
     const cartCollection = client.db("bistroDB").collection("carts");
 
+    // jwt related api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1hr",
+      });
+      res.send({ token });
+    });
+
+    // verify token middlewares
+    const verifyToken = (req, res, next) => {
+      console.log("inside verify token", req.headers);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "forbidden access" });
+      }
+      const token = req.headers.authorization.split("")[1];
+      // if (!token) {
+
+      // }
+      // next();
+    };
+
     // users related api
-    app.post("/users", async (req, res) => {
+    app.post("/users", verifyToken, async (req, res) => {
       const user = req.body;
       // insert email if user doesn't exist ,
       // you can do this many way (1. email unique, 2. upsert, 3. simple checking)
@@ -46,7 +70,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("users/admin/:id", async (req, res) => {
+    app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
