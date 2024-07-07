@@ -38,26 +38,35 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1hr",
+        expiresIn: "1h",
       });
       res.send({ token });
     });
 
-    // verify token middlewares
+    // middlewares
     const verifyToken = (req, res, next) => {
-      console.log("inside verify token", req.headers);
+      console.log("inside verify token", req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "forbidden access" });
       }
-      const token = req.headers.authorization.split("")[1];
-      // if (!token) {
-
-      // }
-      // next();
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "forbidden access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
     };
 
+    // menu related api
+    app.get("/users", verifyToken, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
     // users related api
-    app.post("/users", verifyToken, async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
       // insert email if user doesn't exist ,
       // you can do this many way (1. email unique, 2. upsert, 3. simple checking)
@@ -89,12 +98,6 @@ async function run() {
       res.send(result);
     });
 
-    // menu related api
-    app.get("/users", async (req, res) => {
-      const result = await userCollection.find().toArray();
-      res.send(result);
-    });
-
     app.get("/menu", async (req, res) => {
       const result = await menuCollection.find().toArray();
       res.send(result);
@@ -105,7 +108,7 @@ async function run() {
       res.send(result);
     });
 
-    // cart collection
+    // cart collection related api
     app.post("/carts", async (req, res) => {
       const cartItem = req.body;
       const result = await cartCollection.insertOne(cartItem);
