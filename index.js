@@ -29,10 +29,10 @@ async function run() {
     await client.connect();
 
     // Get the database and collection on which to run the operation
-    const userCollection = client.db("bistroDB").collection("users");
     const menuCollection = client.db("bistroDB").collection("menu");
-    const reviewCollection = client.db("bistroDB").collection("reviews");
+    const userCollection = client.db("bistroDB").collection("users");
     const cartCollection = client.db("bistroDB").collection("carts");
+    const reviewCollection = client.db("bistroDB").collection("reviews");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -45,7 +45,7 @@ async function run() {
 
     // middlewares
     const verifyToken = (req, res, next) => {
-      console.log("inside verify token", req.headers.authorization);
+      // console.log("inside verify token", req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "forbidden access" });
       }
@@ -61,7 +61,7 @@ async function run() {
 
     // use verify admin after verify token
     const verifyAdmin = async (req, res, next) => {
-      const email = req.email.decoded;
+      const email = req.decoded.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
       const isAdmin = user?.role === "admin";
@@ -70,26 +70,6 @@ async function run() {
       }
       next();
     };
-
-    // menu related api
-    // app.get("/users", verifyToken, async (req, res) => {
-    //   const result = await userCollection.find().toArray();
-    //   res.send(result);
-    // });
-
-    // app.get("/users/admin/:email", verifyToken, async (req, res) => {
-    //   const email = req.params.email;
-    //   if (email !== req.decoded.email) {
-    //     return res.status(403).send({ message: "unauthorized access" });
-    //   }
-    //   const query = { email: email };
-    //   const user = await userCollection.findOne(query);
-    //   let admin = false;
-    //   if (user) {
-    //     admin = user?.role === "admin";
-    //   }
-    //   res.send({ admin });
-    // });
 
     // users related api
     app.post("/users", async (req, res) => {
@@ -150,6 +130,12 @@ async function run() {
 
     app.get("/menu", async (req, res) => {
       const result = await menuCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
+      const item = req.body;
+      const result = await menuCollection.insertOne(item);
       res.send(result);
     });
 
