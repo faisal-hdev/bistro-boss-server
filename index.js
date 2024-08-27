@@ -149,7 +149,7 @@ async function run() {
     app.patch("/menu/:id", async (req, res) => {
       const item = req.body;
       const id = req.params.id;
-      const filter = { id: new ObjectId(id) };
+      const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
           name: item.name,
