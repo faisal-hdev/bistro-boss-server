@@ -34,6 +34,7 @@ async function run() {
     const userCollection = client.db("bistroDB").collection("users");
     const cartCollection = client.db("bistroDB").collection("carts");
     const reviewCollection = client.db("bistroDB").collection("reviews");
+    const paymentCollection = client.db("bistroDB").collection("payments");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -202,14 +203,29 @@ async function run() {
       const { price } = req.body;
       const amount = parseInt(price * 100);
       console.log(amount, "amount inside the intent");
-
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
         payment_method_types: ["card"],
       });
-
       res.send({ clientSecret: paymentIntent.client_secret });
+    });
+
+    // payment related api
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+
+      // carefully delete each item from the cart
+      console.log("payment info", payment);
+      const query = {
+        _id: {
+          $in: payment.cartIds.map((id) => new ObjectId(id)),
+        },
+      };
+
+      const deleteResult = await cartCollection.deleteMany(query);
+      res.send(paymentResult, deleteResult);
     });
 
     // Send a ping to confirm a successful connection
